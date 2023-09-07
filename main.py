@@ -2,6 +2,7 @@ from fastapi import FastAPI, Path
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional
+from database import *
 
 app = FastAPI()
 
@@ -20,7 +21,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+
 @app.get("/")
 def main():
     return {"Response":"This is a test!"}
 
+
+@app.getUser("/get_user/{user_id}")
+def get_user_by_id(user_id: str):
+    return {"Result":"None"}
