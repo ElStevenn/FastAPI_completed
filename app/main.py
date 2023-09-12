@@ -1,8 +1,16 @@
+#!/usr/bin/env python3
+
 from fastapi import FastAPI, Path
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional
-from database import *
+from crud import *
+from models import *
+from schemas import *
+from database import SessionLocal, engine
+import sys
+
+models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
@@ -28,6 +36,17 @@ def main():
     return {"Response":"This is a test!"}
 
 
-@app.getUser("/get_user/{user_id}")
+@app.get("/get_user/{user_id}")
 def get_user_by_id(user_id: str):
+
     return {"Result":"None"}
+
+@app.get("/show_tables")
+def show_tables():
+
+    
+    return {}
+
+@app.post("/post_user")
+def post_user():
+    pass
