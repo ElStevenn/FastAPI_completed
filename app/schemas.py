@@ -1,33 +1,28 @@
 from pydantic import BaseModel
-
+import uuid
 
 class ItemBase(BaseModel):
     title: str
-    description: str | None = None
-
+    description: str | None
 
 class ItemCreate(ItemBase):
     pass
 
-
 class Item(ItemBase):
-    id: int
-    owner_id: int
+    id: uuid.UUID
+    owner_id: str
 
     class Config:
         orm_mode = True
 
-
 class UserBase(BaseModel):
     email: str
-
 
 class UserCreate(UserBase):
     password: str
 
-
 class User(UserBase):
-    id: int
+    id: uuid.UUID
     is_active: bool
     items: list[Item] = []
 

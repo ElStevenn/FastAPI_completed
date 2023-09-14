@@ -6,13 +6,16 @@ from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional
 import crud
 from models import *
-from schemas import *
+import schemas 
 from database import SessionLocal, engine, inspector
 import sys
 
 
 db = SessionLocal()
-app = FastAPI()
+app = FastAPI(
+    docs_url= "/documentation",
+    description="this is a login/register application"
+)
 
 
 origins = [
@@ -29,12 +32,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
+"""
 class User(BaseModel):
     email: str
     hashed_password: str
     is_active: bool | None = False
-
+"""
 class items(BaseModel):
     title: str
     description: str | None = ""
@@ -64,20 +67,20 @@ async def get_a_user(user_id: str):
     return {"response":result}
 
 
-@app.get("/get_all_users", description="")
+@app.get("/get_all_users", description="Get all the users from users table")
 async def get_all_users():
     result = crud.get_users(db=db, limit=999)
     return {"response":result}
 
 
-@app.get("/get_item/{item_id}", description="Get and item ")
+@app.get("/get_item/{item_id}", description="Get and item from item table")
 async def get_an_item(item_id: str):
     result = crud.get_item(db=db, item_id=item_id)
     return {"response":result}
 
 
 @app.post("/post_user", description="Add a new user into to User table")
-async def post_user(user: User):
+async def post_user(user: schemas.User):
     try:
         db_user = crud.get_user_by_email(db, email=user.email)
         if db_user:
@@ -90,10 +93,10 @@ async def post_user(user: User):
         db.close()
 
 
-@app.post("/post_item", description="ds")
-async def post_item(item: Item):
-    try:
-        return {"response":}
+@app.post("/post_item", description="Post new item into item table")
+async def post_item(item: schemas.ItemCreate, user_id: str):
+    user = crud.get_user(db, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
 
-    finally:
-        pass
+    return {"response": crud.create_item(db=db, item=item, user_id=user_id)}
