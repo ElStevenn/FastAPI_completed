@@ -11,7 +11,7 @@ class User(Base):
     id = Column(String, primary_key=True, index=True,default=str((uuid.uuid4())))
     email = Column(String, unique=True, index=True)
     hashed_password = Column(String, nullable=False) # Make this please
-    is_active = Column(Boolean, default=True)
+    is_active = Column(Boolean, default=False)
 
     items = relationship("Item", back_populates="owner")
 

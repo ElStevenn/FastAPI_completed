@@ -18,8 +18,8 @@ def get_users(db: Session, skip: int = 0, limit: int = 100):
     return db.query(models.User).offset(skip).limit(limit).all()
 
 
-def create_item(db: Session, item: schemas.ItemCreate, user_id: str):
-    db_item = models.Item(**item.dict(), owner_id=user_id)
+def create_item(db: Session, item: schemas.ItemCreate):
+    db_item = models.Item(**item.dict())
     db.add(db_item)
     db.commit()
     db.refresh(db_item)
@@ -33,9 +33,30 @@ def create_user(db: Session, user: schemas.UserCreate):
     db.refresh(db_user)
     return db_user
 
+def update_user(db: Session, user: schemas.UserCreate, user_id: str):
+    try:
+        db_user = db.query(models.User).filter(models.User.id == user_id).first()
+    except Exception as e:
+        return f"User id {user_id} doesn't exist"
+    
+    if not db_user:
+        return None
+  
+    for key, value in user.dict().items():
+        setattr(db_user, key, value)
+
+    db.commit()
+    db.refresh(db_user)
+    return db_user
 
 def get_items(db: Session, skip: int = 0, limit: int = 100):
     return db.query(models.Item).offset(skip).limit(limit).all()
+
+def delete_user(db: Session, user_id: str):
+    user_to_delete = get_user(db=db, user_id=user_id)
+    deleted_user = db.delete(user_to_delete)
+    db.commit()
+    return deleted_user
 
 
 def create_user_item(db: Session, item: schemas.ItemCreate, user_id: int):

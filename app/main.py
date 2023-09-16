@@ -3,12 +3,14 @@
 from fastapi import FastAPI, Path, HTTPException
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.encoders import jsonable_encoder
 from typing import Optional
 import crud
 from models import *
 import schemas 
 from database import SessionLocal, engine, inspector
 import sys
+import uvicorn
 
 
 db = SessionLocal()
@@ -46,13 +48,18 @@ class items(BaseModel):
 
 @app.get("/")
 def main():
-    return {"Response":"This is a test!"}
+    return {"Response":"Server is actually working, you can use the diferents methods!"}
 
 
 @app.get("/get_user/{user_id}")
 def get_user_by_id(user_id: str):
+    try:
+        return {"Result": crud.get_user(db=db, user_id=user_id)}
+    except:
+        return {"Error": f"User {user_id} doesn't exist."}
+    finally:
+        db.close()
 
-    return {"Result":"None"}
 
 @app.get("/show_tables_name", description="Get all the current tables from the database")
 def show_tables():
@@ -80,7 +87,8 @@ async def get_an_item(item_id: str):
 
 
 @app.post("/post_user", description="Add a new user into to User table")
-async def post_user(user: schemas.User):
+async def post_user(user: schemas.UserCreate):
+    # In this function there are an error when we create another consecutive user, solve it.
     try:
         db_user = crud.get_user_by_email(db, email=user.email)
         if db_user:
@@ -88,15 +96,57 @@ async def post_user(user: schemas.User):
         
         # Create new user
         return {"response": crud.create_user(db=db, user=user)}
-    
+
+    except Exception.IntegrityError:
+        raise HTTPException(status_code=400, detail="Duplicate item ID or other integrity error")   
+
     finally:
         db.close()
 
 
 @app.post("/post_item", description="Post new item into item table")
-async def post_item(item: schemas.ItemCreate, user_id: str):
-    user = crud.get_user(db, user_id)
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+async def post_item(item: schemas.ItemCreate):
+    try:
+        user = crud.get_user(db, str(item.owner_id))
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
 
-    return {"response": crud.create_item(db=db, item=item, user_id=user_id)}
+        
+        return {"response": crud.create_item(db=db, item=item, )}
+    
+    
+
+    finally:
+        db.close()
+
+
+@app.put("/update_user/{user_id}", description="Update an user from the users table")
+async def update_user(user_id: str, user: schemas.UserUpdate):
+    try:
+        if not user_id:
+            raise HTTPException(status_code=404, detail="Invalid input (PUT /update_user/<user_id>)")
+        
+        return {"Response": crud.update_user(db=db, user_id=user_id, user=user)}
+
+    finally:
+        db.close()
+
+@app.delete("/delete_user/{user_id}", description="Delete an user fro the user table")
+async def delete_user(user_id: str):
+    try:
+        if not user_id:
+            raise HTTPException(status_code=404, detail="Invalid input (DELETE /delete_user<user_id>)")
+
+        return {"Response": crud.delete_user(db=db, user_id=user_id)}
+    
+    finally:
+        db.close()
+
+
+if __name__ == "__main__":
+    uvicorn.run(
+        "app.main:app",
+        host="0.0.0.0",
+        port = 8432,
+        reload=True
+    )

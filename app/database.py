@@ -17,4 +17,4 @@ Base = declarative_base()
 
 Base.metadata.create_all(bind=engine)
 
-inspector = inspect(engine)
+inspector = inspect(engine) # This "inspector" is for figure out about the database like table names,  schemas and more
