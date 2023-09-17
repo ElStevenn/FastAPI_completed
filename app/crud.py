@@ -13,6 +13,8 @@ def get_item(db: Session, item_id: str):
 def get_user_by_email(db: Session, email: str):
     return db.query(models.User).filter(models.User.email == email).first()
 
+def get_items(db: Session, skip: int = 0, limit: int = 100):
+    return db.query(models.Item).offset(skip).limit(limit).all()
 
 def get_users(db: Session, skip: int = 0, limit: int = 100):
     return db.query(models.User).offset(skip).limit(limit).all()
@@ -36,27 +38,34 @@ def create_user(db: Session, user: schemas.UserCreate):
 def update_user(db: Session, user: schemas.UserCreate, user_id: str):
     try:
         db_user = db.query(models.User).filter(models.User.id == user_id).first()
+        
+        if not db_user:
+            return f"User with ID {user_id} not found."
+
+        # Update only the attributes that exist in the db_user model
+        for key, value in user.dict().items():
+            if hasattr(db_user, key) and value is not None:
+                setattr(db_user, key, value)
+
+        db.commit()
+        db.refresh(db_user)
+        return db_user
+
     except Exception as e:
-        return f"User id {user_id} doesn't exist"
+        return f"An error occurred: {e}"
     
-    if not db_user:
-        return None
-  
-    for key, value in user.dict().items():
-        setattr(db_user, key, value)
-
-    db.commit()
-    db.refresh(db_user)
-    return db_user
-
-def get_items(db: Session, skip: int = 0, limit: int = 100):
-    return db.query(models.Item).offset(skip).limit(limit).all()
-
+    
 def delete_user(db: Session, user_id: str):
-    user_to_delete = get_user(db=db, user_id=user_id)
-    deleted_user = db.delete(user_to_delete)
-    db.commit()
-    return deleted_user
+    try:
+        user_to_delete = get_user(db=db, user_id=user_id)
+
+        deleted_user = db.delete(user_to_delete)
+        db.commit()
+        return f"User {deleted_user.email} successfully."
+    
+    except Exception as e:
+        return f"An error ocurred: {e}"
+ 
 
 
 def create_user_item(db: Session, item: schemas.ItemCreate, user_id: int):

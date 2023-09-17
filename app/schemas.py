@@ -14,7 +14,7 @@ class Item(ItemBase):
     owner_id: str
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class UserBase(BaseModel):
     email: str | None = None
@@ -31,4 +31,4 @@ class User(UserBase):
     id: uuid.UUID
 
     class Config:
-        orm_mode = True
+        from_attributes = True
