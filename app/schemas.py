@@ -18,6 +18,7 @@ class Item(ItemBase):
 
 class UserBase(BaseModel):
     email: str | None = None
+    username: str | None = None
     is_active: bool | None = False
 
 class UserCreate(UserBase):

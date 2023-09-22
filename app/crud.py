@@ -29,7 +29,7 @@ def create_item(db: Session, item: schemas.ItemCreate):
 
 def create_user(db: Session, user: schemas.UserCreate):
     fake_hashed_password = user.hashed_password + "change_this123" # In the future install a hash model here
-    db_user = models.User(email=user.email, hashed_password=fake_hashed_password)
+    db_user = models.User(email=user.email, hashed_password=fake_hashed_password, username=user.username, is_active=user.is_active)
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
