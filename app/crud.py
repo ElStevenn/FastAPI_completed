@@ -53,20 +53,47 @@ def update_user(db: Session, user: schemas.UserCreate, user_id: str):
 
     except Exception as e:
         return f"An error occurred: {e}"
+
+def update_item(db: Session, item_id: str, item: schemas.ItemUpdate):
+    try:
+        db_item = db.query(models.Item).filter(models.Item.id == item_id).first()
+
+        if not db_item:
+            return f"Item with ID {item_id} not found."
+
+        # Update only the attributes that exist in the db_item model
+        for key, value in item.dict().items():
+            if hasattr(db_item, key) and value is not None:
+                setattr(db_item, key, value)
+
+        db.commit()
+        db.refresh(db_item)
+   
+        return db_item
     
-    
+    except Exception as e:
+        return f"An error ocurred: {e}"
+
 def delete_user(db: Session, user_id: str):
     try:
         user_to_delete = get_user(db=db, user_id=user_id)
-
         deleted_user = db.delete(user_to_delete)
+
         db.commit()
-        return f"User {deleted_user.email} successfully."
+        return f"User {deleted_user.email} deleted successfully."
     
     except Exception as e:
         return f"An error ocurred: {e}"
  
+def delete_item(db: Session, item_id: str):
+    try:
+        item_to_delete = get_item(db=db, item_id=item_id)
+        db.delete(item_to_delete)
 
+        db.commit()
+        return f"Item {item_id} deleted successfully."
+    except Exception as e:
+        return f"An error ocurred: {e}"
 
 def create_user_item(db: Session, item: schemas.ItemCreate, user_id: int):
     db_item = models.Item(**item.dict(), owner_id=user_id)

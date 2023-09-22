@@ -2,9 +2,9 @@ from pydantic import BaseModel
 import uuid
 
 class ItemBase(BaseModel):
-    title: str
+    title: str | None
     description: str | None
-    owner_id: str
+    owner_id: str 
 
 class ItemCreate(ItemBase):
     pass
@@ -24,8 +24,11 @@ class UserCreate(UserBase):
     hashed_password: str
 
 class UserUpdate(UserCreate):
-    """Solve this issue in the future"""
     pass
+
+class ItemUpdate(ItemBase):
+    pass
+
 
 class User(UserBase):
     id: uuid.UUID

@@ -15,8 +15,12 @@ import uvicorn
 
 db = SessionLocal()
 app = FastAPI(
+    debug=True,
+    title="Login and Register API",
+    summary = "This is a login/register application created by Pau Mateu ",
     docs_url= "/documentation",
-    description="this is a login/register application"
+    description="This will be the long description...",
+    version="0.12.1"
 )
 
 
@@ -110,12 +114,8 @@ async def post_item(item: schemas.ItemCreate):
         user = crud.get_user(db, str(item.owner_id))
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
-
         
         return {"response": crud.create_item(db=db, item=item, )}
-    
-    
-
     finally:
         db.close()
 
@@ -131,13 +131,38 @@ async def update_user(user_id: str, user: schemas.UserUpdate):
     finally:
         db.close()
 
-@app.delete("/delete_user/{user_id}", description="Delete an user fro the user table")
+
+@app.put("/update_item/{item_id}", description="Updatea single item from items table")
+async def update_item(item_id: str, item: schemas.ItemUpdate):
+    try:
+        if not item_id:
+            raise HTTPException(status_code=404, detail="Invalid input (PUT /update_item/<item_id>)")
+        
+        return {"Response": crud.update_item(db=db, item_id=item_id, item=item)}
+
+    finally:
+        db.close()
+
+
+@app.delete("/delete_user/{user_id}", description="Delete an user from the user table")
 async def delete_user(user_id: str):
+    # Change note deleted
     try:
         if not user_id:
             raise HTTPException(status_code=404, detail="Invalid input (DELETE /delete_user<user_id>)")
 
         return {"Response": crud.delete_user(db=db, user_id=user_id)}
+    
+    finally:
+        db.close()
+
+@app.delete("/delete_item/{item_id}", description="Delete an item from the item table")
+async def delet_item(item_id: str):
+    try:
+        if not item_id:
+            raise HTTPException(status_code=404, detail="Invalid input (DELETE /delete_item/<item_id>)")
+
+        return {"Response": crud.delete_item(db=db, item_id=item_id)}
     
     finally:
         db.close()
