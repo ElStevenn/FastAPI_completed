@@ -2,21 +2,32 @@ console.log("Hello world! This is register page!");
 
 
 
-function post_user(email, username, password) {
+async function post_user(email, username, password) {
+    // Call API to post a new user. | Async function because an API call is needed (https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch)
     const newUsername = {
         email: email,
         username: username,
-        password: password
+        hashed_password: password,
+        is_active: false
     }
 
-    fetch("http://127.0.0.1:8000/post_user", newUsername)
-    .then(dat => {
-        console.log("Message: ",dat);
-    })
-    .catch(err => {
-        console.log("Error: ", err);
-    });
+    try{
+        const response = await fetch("http://127.0.0.1:8000/post_user", {
+            "method": "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(newUsername),
 
+        });
+
+        const result = await response.json();
+        console.log("Response: ", result)
+
+    } catch(error) {
+        console.log("Error: ", error)
+    }
+    
 }
 
 
@@ -39,7 +50,7 @@ document.getElementById("register_form").addEventListener('submit', (event) => {
         // Here execute the function to send the data to the post
 
 
-
+        post_user(email, username, password);
         document.getElementById("messages").textContent = "You have been registered successfully!";
         document.getElementById("messages").style = "Color: green;";
     }
