@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.encoders import jsonable_encoder
 from typing import Optional
-import crud
+import crud, models
 from models import *
 import schemas 
 from database import SessionLocal, engine, inspector
@@ -20,7 +20,7 @@ app = FastAPI(
     summary = "This is a login/register application created by Pau Mateu ",
     docs_url= "/documentation",
     description="This will be the long description...",
-    version="0.12.1"
+    version="0.12.2"
 )
 
 
@@ -162,10 +162,29 @@ async def delet_item(item_id: str):
         if not item_id:
             raise HTTPException(status_code=404, detail="Invalid input (DELETE /delete_item/<item_id>)")
 
+        
         return {"Response": crud.delete_item(db=db, item_id=item_id)}
     
     finally:
         db.close()
+
+@app.get("/check_user/{user_email}/{user_hashed_password}", description="Returns True if user_email and password matches, otherwise returns False")
+async def check_if_user(user_email: str, user_hashed_password: str):
+    try:
+        if not user_email or not user_hashed_password:
+            raise HTTPException(status_code=404, detail="Invalid input (GET /check_user/<user_name>/<hashed_password>)")
+
+        # Change this when I will implement the hashed passwords
+        user = db.query(models.User).filter(models.User.email == user_email, models.User.hashed_password == user_hashed_password).first()
+
+        if user:
+            return {"result": True}
+        return {"result": False}
+    
+    finally:
+        db.close()
+    
+
 
 
 if __name__ == "__main__":
