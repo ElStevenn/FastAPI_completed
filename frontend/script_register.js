@@ -14,6 +14,7 @@ async function post_user(email, username, password) {
     try{
         const response = await fetch("http://127.0.0.1:8000/post_user", {
             "method": "POST",
+            "mode": "cors",
             headers: {
                 "Content-Type": "application/json",
             },

@@ -6,6 +6,12 @@ class ItemBase(BaseModel):
     description: str | None
     owner_id: str 
 
+class SingleUser(BaseModel):
+    username: str | None
+    hashed_password: str | None
+
+    
+
 class ItemCreate(ItemBase):
     pass
 

@@ -168,20 +168,25 @@ async def delet_item(item_id: str):
     finally:
         db.close()
 
-@app.get("/check_user/{user_email}/{user_hashed_password}", description="Returns True if user_email and password matches, otherwise returns False")
-async def check_if_user(user_email: str, user_hashed_password: str):
+@app.post("/check_user", description="s")
+async def check_if_user(User: schemas.SingleUser):
     try:
-        if not user_email or not user_hashed_password:
+        if not User.username or not User.hashed_password:
             raise HTTPException(status_code=404, detail="Invalid input (GET /check_user/<user_name>/<hashed_password>)")
 
         # Change this when I will implement the hashed passwords
-        user = db.query(models.User).filter(models.User.email == user_email, models.User.hashed_password == user_hashed_password).first()
+        user = db.query(models.User).filter(
+        models.User.username == User.username,
+        models.User.hashed_password == User.hashed_password
+        ).first()
 
         if user:
             return {"result": True}
         return {"result": False}
     
+
     finally:
+        
         db.close()
     
 
