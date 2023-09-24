@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.encoders import jsonable_encoder
 from typing import Optional
-import crud, models
+import crud, models, 
 from models import *
 import schemas 
 from database import SessionLocal, engine, inspector
