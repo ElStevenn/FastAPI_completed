@@ -8,7 +8,7 @@ class ItemBase(BaseModel):
 
 class SingleUser(BaseModel):
     username: str | None
-    hashed_password: str | None
+    password: str | None
 
     
 
@@ -28,7 +28,7 @@ class UserBase(BaseModel):
     is_active: bool | None = False
 
 class UserCreate(UserBase):
-    hashed_password: str
+    password: str
 
 class UserUpdate(UserCreate):
     pass

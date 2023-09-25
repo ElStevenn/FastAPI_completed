@@ -20,6 +20,12 @@ def get_items(db: Session, skip: int = 0, limit: int = 100):
 def get_users(db: Session, skip: int = 0, limit: int = 100):
     return db.query(models.User).offset(skip).limit(limit).all()
 
+def fetch_user_password(db: Session, username: str):
+    user = db.query(models.User).filter(models.User.username == username).first()
+    if not user:
+        raise ValueError(f"{username} doesn't exists in the users table!")
+
+    return user.hashed_password
 
 def create_item(db: Session, item: schemas.ItemCreate):
     db_item = models.Item(**item.dict())
@@ -29,8 +35,12 @@ def create_item(db: Session, item: schemas.ItemCreate):
     return db_item
 
 def create_user(db: Session, user: schemas.UserCreate):
-    fake_hashed_password = user.hashed_password + "change_this123" # In the future install a hash model here
-    db_user = models.User(email=user.email, hashed_password=fake_hashed_password, username=user.username, is_active=user.is_active)
+    key = encrypt.EncryptPassword.read_key()
+
+    cipher = encrypt.EncryptPassword(bytes(key))
+    hashed_password =  cipher.encrypt_passowrd(user.password)
+
+    db_user = models.User(email=user.email, hashed_password=hashed_password, username=user.username, is_active=user.is_active)
     db.add(db_user)
     db.commit()
     db.refresh(db_user)

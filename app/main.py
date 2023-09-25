@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.encoders import jsonable_encoder
 from typing import Optional
-import crud, models, 
+import crud, models, encrypt
 from models import *
 import schemas 
 from database import SessionLocal, engine, inspector
@@ -168,11 +168,17 @@ async def delet_item(item_id: str):
     finally:
         db.close()
 
-@app.post("/check_user", description="s")
+@app.post("/check_user", description="Check if user exists in the user table")
 async def check_if_user(User: schemas.SingleUser):
     try:
         if not User.username or not User.hashed_password:
             raise HTTPException(status_code=404, detail="Invalid input (GET /check_user/<user_name>/<hashed_password>)")
+
+        # Decrypt password
+        key = encrypt.EncryptPassword.read_key()
+        cipher = encrypt.EncryptPassword(key)
+
+        Decrypt_Password = cipher.decrypt_password()
 
         # Change this when I will implement the hashed passwords
         user = db.query(models.User).filter(
@@ -189,7 +195,25 @@ async def check_if_user(User: schemas.SingleUser):
         
         db.close()
     
+@app.get("/get_password/{username}", description="Get hashed password by its username from user table")
+async def get_user_password(username: str):
+    try:
+        if not username:
+            raise HTTPException(status_code=404, detail="Invalid input (GET /get_password/<username>)")
 
+        crypted_password = crud.fetch_user_password(db=db, username=username)
+
+        Key = encrypt.EncryptPassword.read_key()
+        Encrypter = encrypt.EncryptPassword(Key)
+
+        decrypted_password = Encrypter.decrypt_password(crypted_password)
+        
+        return {"password": decrypted_password}
+    
+
+    finally:
+        db.close()
+        
 
 
 if __name__ == "__main__":
