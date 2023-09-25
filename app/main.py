@@ -175,7 +175,7 @@ async def delet_item(item_id: str):
 @app.post("/check_user", description="Check if user exists in the users table")
 async def check_if_user(User: schemas.SingleUser):
     try:
-        if not User.username or not User.hashed_password:
+        if not User.username or not User.password:
             raise HTTPException(status_code=404, detail="Invalid input (GET /check_user/<user_name>/<hashed_password>)")
 
         # Encrypt password
@@ -184,7 +184,16 @@ async def check_if_user(User: schemas.SingleUser):
 
         Encrypted_Password = Encrypter.decrypt_password(User.password)
 
-        # Schema to check if the user and encrypted password exists in the database
+        """
+
+        MESSAGE: Change the query so that I an check if the username exists into the table, in case that the username
+        exists in the Users table, decrypt the password and check if password matches.
+
+        """
+
+        # Change this -------------->
+
+        # Query to check if the user and encrypted password exists in the database
         user = db.query(models.User).filter(
         models.User.username == User.username,
         models.User.hashed_password == Encrypted_Password
