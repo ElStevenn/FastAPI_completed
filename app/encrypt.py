@@ -50,6 +50,8 @@ if __name__ == '__main__':
     Decrypt_password = Encrypter.decrypt_password(ecrp_pass)
     print(Decrypt_password)
 
+    print(type(ecrp_pass))
+
 
 
 """    

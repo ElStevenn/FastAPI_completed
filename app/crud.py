@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-
+from sqlalchemy import select
 #from . import models, schemas
 import models
 import schemas
@@ -36,11 +36,9 @@ def create_item(db: Session, item: schemas.ItemCreate):
 
 def create_user(db: Session, user: schemas.UserCreate):
     key = encrypt.EncryptPassword.read_key()
+    encrypter = encrypt.EncryptPassword(key)
 
-    cipher = encrypt.EncryptPassword(bytes(key))
-    hashed_password =  cipher.encrypt_passowrd(user.password)
-
-    db_user = models.User(email=user.email, hashed_password=hashed_password, username=user.username, is_active=user.is_active)
+    db_user = models.User(email=user.email, hashed_password=encrypter.encrypt_passowrd(user.password), username=user.username, is_active=user.is_active)
     db.add(db_user)
     db.commit()
     db.refresh(db_user)

@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, Column, ForeignKey, Integer, String
+from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, BINARY
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import UUID
 import uuid
@@ -12,7 +12,7 @@ class User(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     email = Column(String, unique=True, index=True)
     username = Column(String, nullable=False,  index=True)
-    hashed_password = Column(String, nullable=False) # Make this please
+    hashed_password = Column(BINARY, nullable=False)
     is_active = Column(Boolean, default=False)
 
     items = relationship("Item", back_populates="owner")
@@ -27,3 +27,8 @@ class Item(Base):
     owner_id = Column(Integer, ForeignKey("users.id"))
 
     owner = relationship("User", back_populates="items")
+
+
+
+
+    

@@ -38,12 +38,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-"""
-class User(BaseModel):
-    email: str
-    hashed_password: str
-    is_active: bool | None = False
-"""
+
 class items(BaseModel):
     title: str
     description: str | None = ""
@@ -70,6 +65,15 @@ def show_tables():
     table_names = inspector.get_table_names()
 
     return {"Table_Names":table_names}
+
+
+@app.get("/show_users_table", description="Show all conent of users table")
+def show_user_table():
+    with engine.connect() as conn:
+        result = conn.execute(crud.select(models.User))
+        users = result.scalars().all()
+    
+    return users
 
 
 @app.get("/get_user/{user_id}", description="Get user data with its id |")
@@ -168,23 +172,25 @@ async def delet_item(item_id: str):
     finally:
         db.close()
 
-@app.post("/check_user", description="Check if user exists in the user table")
+@app.post("/check_user", description="Check if user exists in the users table")
 async def check_if_user(User: schemas.SingleUser):
     try:
         if not User.username or not User.hashed_password:
             raise HTTPException(status_code=404, detail="Invalid input (GET /check_user/<user_name>/<hashed_password>)")
 
-        # Decrypt password
-        key = encrypt.EncryptPassword.read_key()
-        cipher = encrypt.EncryptPassword(key)
+        # Encrypt password
+        Key = encrypt.EncryptPassword.read_key()
+        Encrypter = encrypt.EncryptPassword(Key)
 
-        Decrypt_Password = cipher.decrypt_password()
+        Encrypted_Password = Encrypter.decrypt_password(User.password)
 
-        # Change this when I will implement the hashed passwords
+        # Schema to check if the user and encrypted password exists in the database
         user = db.query(models.User).filter(
         models.User.username == User.username,
-        models.User.hashed_password == User.hashed_password
+        models.User.hashed_password == Encrypted_Password
         ).first()
+
+        # In the future implement more thinks here such "is_active" in case the user exists
 
         if user:
             return {"result": True}
@@ -192,7 +198,6 @@ async def check_if_user(User: schemas.SingleUser):
     
 
     finally:
-        
         db.close()
     
 @app.get("/get_password/{username}", description="Get hashed password by its username from user table")
