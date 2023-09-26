@@ -189,7 +189,7 @@ async def check_if_user(User: schemas.SingleUser):
 
         Decrypted_Password = Encrypter.decrypt_password(bytes(username.hashed_password))
         if Decrypted_Password == User.password:
-            return {"result":True, "Message":"Username and password matches!"}
+            return {"result":True, "Message":f"Logged successfully as {User.username}"}
         return {"result":False, "Message":"Incorrect password!"}      
         
     finally:

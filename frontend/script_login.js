@@ -47,11 +47,11 @@ document.addEventListener('DOMContentLoaded', (event) => {
         // Await the result first before accessing the 'result' attribute
         let checkResult = await Check_if_user(username, password);
         if (checkResult['result']) {
-            document.getElementById("additional_text").textContent = `Logged successfully as ${username}`;
+            document.getElementById("additional_text").textContent = checkResult['Message'];
             document.getElementById("additional_text").style.color = "green";
             console.log(`Username ${username} exists!`)
         } else {
-            document.getElementById("additional_text").textContent = `User ${username} doesn't exist!`;
+            document.getElementById("additional_text").textContent = checkResult['Message'];
             document.getElementById("additional_text").style.color = "red";
         }
 
