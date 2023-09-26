@@ -7,7 +7,7 @@ async function post_user(email, username, password) {
     const newUsername = {
         email: email,
         username: username,
-        hashed_password: password,
+        password: password,
         is_active: false
     }
 

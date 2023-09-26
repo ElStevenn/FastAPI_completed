@@ -23,6 +23,8 @@ app = FastAPI(
     version="0.12.2"
 )
 
+Key = encrypt.EncryptPassword.read_key()
+Encrypter = encrypt.EncryptPassword(Key)
 
 origins = [
     "http://localhost",
@@ -178,34 +180,18 @@ async def check_if_user(User: schemas.SingleUser):
         if not User.username or not User.password:
             raise HTTPException(status_code=404, detail="Invalid input (GET /check_user/<user_name>/<hashed_password>)")
 
-        # Encrypt password
-        Key = encrypt.EncryptPassword.read_key()
-        Encrypter = encrypt.EncryptPassword(Key)
+        # Check if username matches with the user table
+        username = db.query(models.User).filter(models.User.username == User.username).first()
+        if not username:
+            return {"result": False, "Message": f"Username {User.username} doesn't exists!"}
 
-        Encrypted_Password = Encrypter.decrypt_password(User.password)
+        # In case username exists into the table, check the password
 
-        """
-
-        MESSAGE: Change the query so that I an check if the username exists into the table, in case that the username
-        exists in the Users table, decrypt the password and check if password matches.
-
-        """
-
-        # Change this -------------->
-
-        # Query to check if the user and encrypted password exists in the database
-        user = db.query(models.User).filter(
-        models.User.username == User.username,
-        models.User.hashed_password == Encrypted_Password
-        ).first()
-
-        # In the future implement more thinks here such "is_active" in case the user exists
-
-        if user:
-            return {"result": True}
-        return {"result": False}
-    
-
+        Decrypted_Password = Encrypter.decrypt_password(bytes(username.hashed_password))
+        if Decrypted_Password == User.password:
+            return {"result":True, "Message":"Username and password matches!"}
+        return {"result":False, "Message":"Incorrect password!"}      
+        
     finally:
         db.close()
     
@@ -216,9 +202,6 @@ async def get_user_password(username: str):
             raise HTTPException(status_code=404, detail="Invalid input (GET /get_password/<username>)")
 
         crypted_password = crud.fetch_user_password(db=db, username=username)
-
-        Key = encrypt.EncryptPassword.read_key()
-        Encrypter = encrypt.EncryptPassword(Key)
 
         decrypted_password = Encrypter.decrypt_password(crypted_password)
         

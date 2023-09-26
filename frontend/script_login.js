@@ -5,7 +5,7 @@ console.log("This is login page!");
 async function Check_if_user(user, password) {
     const User_pass = {
         "username":user,
-        "hashed_password":password
+        "password":password
     }
 
     try {
