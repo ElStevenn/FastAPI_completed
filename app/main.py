@@ -106,7 +106,8 @@ async def post_user(user: schemas.UserCreate):
         
         # Create new user
         return {"response": crud.create_user(db=db, user=user)}
-
+        
+        
     except Exception.IntegrityError:
         raise HTTPException(status_code=400, detail="Duplicate item ID or other integrity error")   
 
