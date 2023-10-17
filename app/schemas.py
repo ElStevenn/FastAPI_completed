@@ -10,7 +10,16 @@ class SingleUser(BaseModel):
     username: str | None
     password: str | None
 
-    
+class BookBase(BaseModel):
+    owner_id: str | None = None
+    book_name: str
+    description: str
+    photo_path: str = '/photos/default.png'
+    content: str
+
+class CreateBook(BookBase):
+    """It's the BookBase but i have to create this"""
+    pass
 
 class ItemCreate(ItemBase):
     pass

@@ -11,6 +11,9 @@ def get_user(db: Session, user_id: str):
 def get_item(db: Session, item_id: str):
     return db.query(models.Item).filter(models.Item.id == item_id).first()
 
+def get_book(db: Session, book_id: str):
+    return db.query(models.Books).filter(models.Books.id == book_id).first()
+
 def get_user_by_email(db: Session, email: str):
     return db.query(models.User).filter(models.User.email == email).first()
 
@@ -19,6 +22,9 @@ def get_items(db: Session, skip: int = 0, limit: int = 100):
 
 def get_users(db: Session, skip: int = 0, limit: int = 100):
     return db.query(models.User).offset(skip).limit(limit).all()
+
+def get_books(db: Session, skip: int = 0, limit: int = 9999):
+    return db.query(models.Books).offset(skip).limit(limit).all()
 
 def fetch_user_password(db: Session, username: str):
     user = db.query(models.User).filter(models.User.username == username).first()

@@ -28,6 +28,16 @@ class Item(Base):
 
     owner = relationship("User", back_populates="items")
 
+class Books(Base):
+    __tablename__ = "Books"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid1)
+    owner_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    book_name = Column(String, nullable=False)
+    description = Column(String(1000), nullable=False)
+    photo_path = Column(String, default="/photos/default.png")
+    content = Column(String, nullable=False)
+
 
 
 

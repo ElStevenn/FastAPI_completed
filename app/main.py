@@ -211,7 +211,23 @@ async def get_user_password(username: str):
 
     finally:
         db.close()
-        
+
+# --------------------Second part of my API----------------------------------------
+
+@app.post("/post_book", description="Create a new book")
+async def post_book(Book: schemas.CreateBook):
+    pass
+
+
+
+
+
+
+
+
+
+
+
 
 
 if __name__ == "__main__":
