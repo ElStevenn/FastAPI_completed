@@ -40,6 +40,7 @@ def create_item(db: Session, item: schemas.ItemCreate):
     db.refresh(db_item)
     return db_item
 
+
 def create_user(db: Session, user: schemas.UserCreate):
     key = encrypt.EncryptPassword.read_key()
     encrypter = encrypt.EncryptPassword(key)

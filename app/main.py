@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 
-from fastapi import FastAPI, Path, HTTPException
+from fastapi import FastAPI, Path, HTTPException, WebSocket
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.encoders import jsonable_encoder
+from fastapi.responses import HTMLResponse # Implement in the future something related with sockets
 from typing import Optional
 import crud, models, encrypt
 from models import *
@@ -214,9 +215,11 @@ async def get_user_password(username: str):
 
 # --------------------Second part of my API----------------------------------------
 
-@app.post("/post_book", description="Create a new book")
-async def post_book(Book: schemas.CreateBook):
-    pass
+@app.get("/get_book_by_id/{book_id}", description="Get a book by its id")
+async def post_book(book_id: str):
+    book = crud.get_book(db=db, book_id=book_id)
+    return {"result":book}
+
 
 
 
