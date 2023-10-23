@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 
-from fastapi import FastAPI, Path, HTTPException, WebSocket
+from fastapi import FastAPI, Path, HTTPException, WebSocket, Depends
+from typing import Annotated, Optional
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import HTMLResponse # Implement in the future something related with sockets
-from typing import Optional
+from sqlalchemy.orm import Session
 import crud, models, encrypt
 from models import *
 import schemas 
@@ -14,7 +15,7 @@ import sys
 import uvicorn
 
 
-db = SessionLocal()
+
 app = FastAPI(
     debug=True,
     title="Login and Register API",
@@ -42,10 +43,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-class items(BaseModel):
-    title: str
-    description: str | None = ""
-    owner_id: uuid.UUID
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    
+    finally:
+        db.close()
 
 
 @app.get("/")
@@ -54,13 +58,11 @@ def main():
 
 
 @app.get("/get_user/{user_id}")
-def get_user_by_id(user_id: str):
+def get_user_by_id(user_id: str, db: Session = Depends(get_db)):
     try:
         return {"Result": crud.get_user(db=db, user_id=user_id)}
     except:
         return {"Error": f"User {user_id} doesn't exist."}
-    finally:
-        db.close()
 
 
 @app.get("/show_tables_name", description="Get all the current tables from the database")
@@ -80,25 +82,25 @@ def show_user_table():
 
 
 @app.get("/get_user/{user_id}", description="Get user data with its id |")
-async def get_a_user(user_id: str):
+async def get_a_user(user_id: str, db: Session = Depends(get_db)):
     result = crud.get_user(db=db, user_id=user_id)
     return {"response":result}
 
 
 @app.get("/get_all_users", description="Get all the users from users table")
-async def get_all_users():
+async def get_all_users(db: Session = Depends(get_db)):
     result = crud.get_users(db=db, limit=999)
     return {"response":result}
 
 
 @app.get("/get_item/{item_id}", description="Get and item from item table")
-async def get_an_item(item_id: str):
+async def get_an_item(item_id: str, db: Session = Depends(get_db)):
     result = crud.get_item(db=db, item_id=item_id)
     return {"response":result}
 
 
 @app.post("/post_user", description="Add a new user into to User table")
-async def post_user(user: schemas.UserCreate):
+async def post_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     # In this function there are an error when we create another consecutive user, solve it.
     try:
         db_user = crud.get_user_by_email(db, email=user.email)
@@ -112,48 +114,47 @@ async def post_user(user: schemas.UserCreate):
     except Exception.IntegrityError:
         raise HTTPException(status_code=400, detail="Duplicate item ID or other integrity error")   
 
-    finally:
-        db.close()
-
+    except Exception as e:
+        return {"error": f"an error ocurred: {e}"}
 
 @app.post("/post_item", description="Post new item into item table")
-async def post_item(item: schemas.ItemCreate):
+async def post_item(item: schemas.ItemCreate, db: Session = Depends(get_db)):
     try:
         user = crud.get_user(db, str(item.owner_id))
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
         
         return {"response": crud.create_item(db=db, item=item, )}
-    finally:
-        db.close()
+
+    except Exception as e:
+        return{"error": f"an error ocurred: {e}"}
 
 
 @app.put("/update_user/{user_id}", description="Update an user from the users table")
-async def update_user(user_id: str, user: schemas.UserUpdate):
+async def update_user(user_id: str, user: schemas.UserUpdate, db: Session = Depends(get_db)):
     try:
         if not user_id:
             raise HTTPException(status_code=404, detail="Invalid input (PUT /update_user/<user_id>)")
         
         return {"Response": crud.update_user(db=db, user_id=user_id, user=user)}
 
-    finally:
-        db.close()
-
+    except:
+        return {"error": f"an error ocurred: {e}"}
 
 @app.put("/update_item/{item_id}", description="Updatea single item from items table")
-async def update_item(item_id: str, item: schemas.ItemUpdate):
+async def update_item(item_id: str, item: schemas.ItemUpdate, db: Session = Depends(get_db)):
     try:
         if not item_id:
             raise HTTPException(status_code=404, detail="Invalid input (PUT /update_item/<item_id>)")
         
         return {"Response": crud.update_item(db=db, item_id=item_id, item=item)}
 
-    finally:
-        db.close()
+    except Exception as e:
+        return {"error":f"an error ocurred: {e}"}
 
 
 @app.delete("/delete_user/{user_id}", description="Delete an user from the user table")
-async def delete_user(user_id: str):
+async def delete_user(user_id: str, db: Session = Depends(get_db)):
     # Change note deleted
     try:
         if not user_id:
@@ -161,11 +162,11 @@ async def delete_user(user_id: str):
 
         return {"Response": crud.delete_user(db=db, user_id=user_id)}
     
-    finally:
-        db.close()
+    except Exception as e:
+        return {"error": f"an error ocurred: {e}"}
 
 @app.delete("/delete_item/{item_id}", description="Delete an item from the item table")
-async def delet_item(item_id: str):
+async def delet_item(item_id: str, db: Session = Depends(get_db)):
     try:
         if not item_id:
             raise HTTPException(status_code=404, detail="Invalid input (DELETE /delete_item/<item_id>)")
@@ -173,11 +174,11 @@ async def delet_item(item_id: str):
         
         return {"Response": crud.delete_item(db=db, item_id=item_id)}
     
-    finally:
-        db.close()
+    except Exception as e:
+        return {"error": f"an error ocurred: {e}"}
 
 @app.post("/check_user", description="Check if user exists in the users table")
-async def check_if_user(User: schemas.SingleUser):
+async def check_if_user(User: schemas.SingleUser, db: Session = Depends(get_db)):
     try:
         if not User.username or not User.password:
             raise HTTPException(status_code=404, detail="Invalid input (GET /check_user/<user_name>/<hashed_password>)")
@@ -194,11 +195,12 @@ async def check_if_user(User: schemas.SingleUser):
             return {"result":True, "Message":f"Logged successfully as {User.username}"}
         return {"result":False, "Message":"Incorrect password!"}      
         
-    finally:
-        db.close()
-    
+    except Exception as e:
+        return {"error": f"an error ocurred: {e}"}
+
+
 @app.get("/get_password/{username}", description="Get hashed password by its username from user table")
-async def get_user_password(username: str):
+async def get_user_password(username: str, db: Session = Depends(get_db)):
     try:
         if not username:
             raise HTTPException(status_code=404, detail="Invalid input (GET /get_password/<username>)")
@@ -209,17 +211,19 @@ async def get_user_password(username: str):
         
         return {"password": decrypted_password}
     
-
-    finally:
-        db.close()
+    except Exception as e:
+        return {"error": f"an error ocurred: {e}"}
 
 # --------------------Second part of my API----------------------------------------
 
-@app.get("/get_book_by_id/{book_id}", description="Get a book by its id")
-async def post_book(book_id: str):
-    book = crud.get_book(db=db, book_id=book_id)
-    return {"result":book}
+@app.get("/get_books_by_owner_id/{owner_id}", description="Get all books by its owner_id")
+async def post_book(owner_id: str, db: Session = Depends(get_db)):
+    try:
 
+        books = crud.get_books_by_author(db=db, owner_id=owner_id)
+        return {"result": [result[0] for result in books]}
+    except Exception as e:
+        return {"error": e}
 
 
 

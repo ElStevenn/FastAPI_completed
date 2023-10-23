@@ -84,14 +84,14 @@ def create_books_to_table():
             user_count += 1  
         owner_id = uuid.UUID(AllUsers.iloc[user_count].id)
         book_name = str(dt2.iloc[_].book_title)
-        description = str(dt2.iloc[_].description)[:1000]
+        description = str(dt2.iloc[_].description)
         photo_path = str(dt2.iloc[_].photo_path)
         price_value = str(dt2.iloc[_].price)
         if isinstance(price_value, str):
             price = float(price_value.replace(",", "."))
         else:
             price = float(price_value)
-        content = str(dt2.iloc[_].content)[:1000]
+        content = str(dt2.iloc[_].content)
         
         print(owner_id)
 
@@ -105,14 +105,17 @@ def create_books_to_table():
             print(f"Error inserting book: {e}")
             db.rollback()
       
+def get_books_by_author(owner_id: str):
+    return (
+        db.query(models.Books_.book_title)
+        .join(models.Users, models.Books_.owner_id == models.Users.id)
+        .filter(models.Books_.owner_id == owner_id)
+        .all()
+    )
 
 
 if __name__ == "__main__":
-    # print(dt2.iloc[1].description[:1000])
-    create_books_to_table()
-    print(inspector.get_table_names())
-
-    #create_books_dataset().to_csv("datasets/books_dataset.csv", index=False)
-    # print(book_dg.shape)
-    # print(book_pr.shape)
-    # print(descrp_dt.shape)
+    results = get_books_by_author("e75b0295-c956-4c8e-aaaa-0db9b795f8b2")
+    
+    defa = [result[0] for result in results]
+    print(defa)

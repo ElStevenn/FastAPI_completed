@@ -6,28 +6,37 @@ import schemas
 import encrypt
 
 def get_user(db: Session, user_id: str):
-    return db.query(models.User).filter(models.User.id == user_id).first()
+    return db.query(models.Users).filter(models.Users.id == user_id).first()
 
 def get_item(db: Session, item_id: str):
     return db.query(models.Item).filter(models.Item.id == item_id).first()
 
 def get_book(db: Session, book_id: str):
-    return db.query(models.Books).filter(models.Books.id == book_id).first()
+    return db.query(models.Books_).filter(models.Books_.id == book_id).first()
 
 def get_user_by_email(db: Session, email: str):
-    return db.query(models.User).filter(models.User.email == email).first()
+    return db.query(models.Users).filter(models.Users.email == email).first()
 
 def get_items(db: Session, skip: int = 0, limit: int = 100):
     return db.query(models.Item).offset(skip).limit(limit).all()
 
 def get_users(db: Session, skip: int = 0, limit: int = 100):
-    return db.query(models.User).offset(skip).limit(limit).all()
+    return db.query(models.Users).offset(skip).limit(limit).all()
 
 def get_books(db: Session, skip: int = 0, limit: int = 9999):
-    return db.query(models.Books).offset(skip).limit(limit).all()
+    return db.query(models.Books_).offset(skip).limit(limit).all()
+
+def get_books_by_author(db: Session, owner_id: str):
+    return (
+        db.query(models.Books_.book_title)
+        .join(models.Users, models.Books_.owner_id == models.Users.id)
+        .filter(models.Books_.owner_id == owner_id)
+        .all()
+    )
+
 
 def fetch_user_password(db: Session, username: str):
-    user = db.query(models.User).filter(models.User.username == username).first()
+    user = db.query(models.Users).filter(models.Users.username == username).first()
     if not user:
         raise ValueError(f"{username} doesn't exists in the users table!")
 
@@ -45,7 +54,7 @@ def create_user(db: Session, user: schemas.UserCreate):
     key = encrypt.EncryptPassword.read_key()
     encrypter = encrypt.EncryptPassword(key)
 
-    db_user = models.User(email=user.email, hashed_password=encrypter.encrypt_passowrd(user.password), username=user.username, is_active=user.is_active)
+    db_user = models.Users(email=user.email, hashed_password=encrypter.encrypt_passowrd(user.password), username=user.username, is_active=user.is_active)
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
@@ -53,7 +62,7 @@ def create_user(db: Session, user: schemas.UserCreate):
 
 def update_user(db: Session, user: schemas.UserCreate, user_id: str):
     try:
-        db_user = db.query(models.User).filter(models.User.id == user_id).first()
+        db_user = db.query(models.Users).filter(models.Users.id == user_id).first()
         
         if not db_user:
             return f"User with ID {user_id} not found."
