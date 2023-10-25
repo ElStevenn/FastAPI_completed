@@ -1,9 +1,10 @@
+#!/usr/bin/env python3
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 #from . import models, schemas
-import models
-import schemas
-import encrypt
+from . import models
+from . import schemas
+from . import encrypt
 
 def get_user(db: Session, user_id: str):
     return db.query(models.Users).filter(models.Users.id == user_id).first()
@@ -28,12 +29,14 @@ def get_books(db: Session, skip: int = 0, limit: int = 9999):
 
 def get_books_by_author(db: Session, owner_id: str):
     return (
-        db.query(models.Books_.book_title)
+        db.query(models.Books_.id, models.Books_.book_title, models.Books_.description, models.Books_.photo_path, models.Books_.price, models.Books_.price)
         .join(models.Users, models.Books_.owner_id == models.Users.id)
         .filter(models.Books_.owner_id == owner_id)
         .all()
     )
 
+def get_books_by_id(db: Session, book_id: str):
+    return db.query(models.Books_).filter(models.Books_.id == book_id).all()
 
 def fetch_user_password(db: Session, username: str):
     user = db.query(models.Users).filter(models.Users.username == username).first()
@@ -49,6 +52,12 @@ def create_item(db: Session, item: schemas.ItemCreate):
     db.refresh(db_item)
     return db_item
 
+def create_book(db: Session, book: schemas.CreateBook, owner_id: str):
+    db_book = models.Books_(**book.model_dump(), owner_id=owner_id)
+    db.add(db_book)
+    db.commit()
+    db.refresh(db_book)
+    return db_book
 
 def create_user(db: Session, user: schemas.UserCreate):
     key = encrypt.EncryptPassword.read_key()

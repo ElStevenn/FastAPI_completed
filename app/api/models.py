@@ -1,11 +1,12 @@
 from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, BINARY, Float, Text
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.ext.declarative import declarative_base
 import uuid
-
-from database import Base
 from sqlalchemy.orm import configure_mappers
 configure_mappers()
+
+Base = declarative_base()
 
 class Users(Base):
     __tablename__ = "users"
@@ -45,7 +46,7 @@ class Books_(Base):
     owner_id = Column(UUID(as_uuid=True), ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
     book_title = Column(String, nullable=False)
     description = Column(Text, nullable=False)
-    photo_path = Column(String, default="/photos/default.png")
+    photo_path = Column(String, default="default.png")
     price = Column(Float, default=0.0)
     content = Column(Text, nullable=False)
 

@@ -1,19 +1,16 @@
 #!/usr/bin/env python3
 
-from fastapi import FastAPI, Path, HTTPException, WebSocket, Depends
-from typing import Annotated, Optional
+from fastapi import FastAPI, HTTPException, WebSocket, Depends, File, UploadFile
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.encoders import jsonable_encoder
-from fastapi.responses import HTMLResponse # Implement in the future something related with sockets
+from fastapi.responses import PlainTextResponse, FileResponse, RedirectResponse
 from sqlalchemy.orm import Session
-import crud, models, encrypt
-from models import *
-import schemas 
-from database import SessionLocal, engine, inspector
-import sys
+from api import crud, models, encrypt, dependencies, schemas 
+from typing import Annotated
+from api.database import engine, inspector
+import sys, os
 import uvicorn
-
 
 
 app = FastAPI(
@@ -43,72 +40,59 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    
-    finally:
-        db.close()
 
 
-@app.get("/")
+
+@app.get("/", description = "This is the main function that will be redirected to show_tables_name")
 def main():
-    return {"Response":"Server is actually working, you can use the diferents methods!"}
+    return RedirectResponse(url="/show_tables_name")
 
 
 @app.get("/get_user/{user_id}")
-def get_user_by_id(user_id: str, db: Session = Depends(get_db)):
+def get_user_by_id(user_params: Annotated[dict, Depends(dependencies.user_parameters)], db: Session = Depends(dependencies.get_db)):
     try:
-        return {"Result": crud.get_user(db=db, user_id=user_id)}
+        return {"Result": crud.get_user(db=db, user_id=user_params['user_id'])}
     except:
-        return {"Error": f"User {user_id} doesn't exist."}
+        return {"Error": f"User {user_params['user_id']} doesn't exist."}
 
 
 @app.get("/show_tables_name", description="Get all the current tables from the database")
 def show_tables():
     table_names = inspector.get_table_names()
-
     return {"Table_Names":table_names}
 
 
 @app.get("/show_users_table", description="Show all conent of users table")
 def show_user_table():
     with engine.connect() as conn:
-        result = conn.execute(crud.select(models.User))
+        result = conn.execute(crud.select(models.Users))
         users = result.scalars().all()
-    
+
     return users
 
 
-@app.get("/get_user/{user_id}", description="Get user data with its id |")
-async def get_a_user(user_id: str, db: Session = Depends(get_db)):
-    result = crud.get_user(db=db, user_id=user_id)
-    return {"response":result}
-
-
 @app.get("/get_all_users", description="Get all the users from users table")
-async def get_all_users(db: Session = Depends(get_db)):
+async def get_all_users(db: Session = Depends(dependencies.get_db)):
     result = crud.get_users(db=db, limit=999)
     return {"response":result}
 
 
 @app.get("/get_item/{item_id}", description="Get and item from item table")
-async def get_an_item(item_id: str, db: Session = Depends(get_db)):
-    result = crud.get_item(db=db, item_id=item_id)
+async def get_an_item(item_params: Annotated[dict, Depends(dependencies.item_paramters)], db: Session = Depends(dependencies.get_db)):
+    result = crud.get_item(db=db, item_id=item_params['item_id'])
     return {"response":result}
 
 
 @app.post("/post_user", description="Add a new user into to User table")
-async def post_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
+async def post_user(user_params: Annotated[dict, Depends(dependencies.user_parameters)], db: Session = Depends(dependencies.get_db)):
     # In this function there are an error when we create another consecutive user, solve it.
     try:
-        db_user = crud.get_user_by_email(db, email=user.email)
+        db_user = crud.get_user_by_email(db, email=user_params['user_body'].email)
         if db_user:
             raise HTTPException(status_code=400, detail="Email already registered")
         
         # Create new user
-        return {"response": crud.create_user(db=db, user=user)}
+        return {"response": crud.create_user(db=db, user=user_params['user_body'])}
         
         
     except Exception.IntegrityError:
@@ -117,82 +101,86 @@ async def post_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     except Exception as e:
         return {"error": f"an error ocurred: {e}"}
 
+
 @app.post("/post_item", description="Post new item into item table")
-async def post_item(item: schemas.ItemCreate, db: Session = Depends(get_db)):
+async def post_item(item_params: Annotated[dict, Depends(dependencies.item_paramters)], db: Session = Depends(dependencies.get_db)):
     try:
-        user = crud.get_user(db, str(item.owner_id))
+        user = crud.get_user(db, str(item_params['item_body'].owner_id))
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
         
-        return {"response": crud.create_item(db=db, item=item, )}
+        return {"response": crud.create_item(db=db, item=item_params['item_body'])}
 
     except Exception as e:
         return{"error": f"an error ocurred: {e}"}
 
 
 @app.put("/update_user/{user_id}", description="Update an user from the users table")
-async def update_user(user_id: str, user: schemas.UserUpdate, db: Session = Depends(get_db)):
+async def update_user(user_params: Annotated[dict, Depends(dependencies.user_parameters)], db: Session = Depends(dependencies.get_db)):
     try:
-        if not user_id:
+        if not user_params['user_id']:
             raise HTTPException(status_code=404, detail="Invalid input (PUT /update_user/<user_id>)")
         
-        return {"Response": crud.update_user(db=db, user_id=user_id, user=user)}
+        return {"Response": crud.update_user(db=db, user_id=user_params['user_id'], user=user_params['user_body'])}
 
-    except:
+    except Exception as e:
         return {"error": f"an error ocurred: {e}"}
 
+
 @app.put("/update_item/{item_id}", description="Updatea single item from items table")
-async def update_item(item_id: str, item: schemas.ItemUpdate, db: Session = Depends(get_db)):
+async def update_item(item_params: Annotated[dict, Depends(dependencies.item_paramters)], db: Session = Depends(dependencies.get_db)):
     try:
-        if not item_id:
+        if not item_params['item_id']:
             raise HTTPException(status_code=404, detail="Invalid input (PUT /update_item/<item_id>)")
         
-        return {"Response": crud.update_item(db=db, item_id=item_id, item=item)}
+        return {"Response": crud.update_item(db=db, item_id=item_params['item_id'], item=item_params['item_body'])}
 
     except Exception as e:
         return {"error":f"an error ocurred: {e}"}
 
 
 @app.delete("/delete_user/{user_id}", description="Delete an user from the user table")
-async def delete_user(user_id: str, db: Session = Depends(get_db)):
+async def delete_user(user_params: Annotated[dict, Depends(dependencies.user_parameters)], db: Session = Depends(dependencies.get_db)):
     # Change note deleted
     try:
-        if not user_id:
+        if not user_params['user_id']:
             raise HTTPException(status_code=404, detail="Invalid input (DELETE /delete_user<user_id>)")
 
-        return {"Response": crud.delete_user(db=db, user_id=user_id)}
+        return {"Response": crud.delete_user(db=db, user_id=user_params['user_id'])}
     
     except Exception as e:
         return {"error": f"an error ocurred: {e}"}
 
+
 @app.delete("/delete_item/{item_id}", description="Delete an item from the item table")
-async def delet_item(item_id: str, db: Session = Depends(get_db)):
+async def delet_item(item_params: Annotated[dict, Depends(dependencies.item_paramters)], db: Session = Depends(dependencies.get_db)):
     try:
-        if not item_id:
+        if not item_params['item_id']:
             raise HTTPException(status_code=404, detail="Invalid input (DELETE /delete_item/<item_id>)")
 
         
-        return {"Response": crud.delete_item(db=db, item_id=item_id)}
+        return {"Response": crud.delete_item(db=db, item_id=item_params['item_id'])}
     
     except Exception as e:
         return {"error": f"an error ocurred: {e}"}
 
+
 @app.post("/check_user", description="Check if user exists in the users table")
-async def check_if_user(User: schemas.SingleUser, db: Session = Depends(get_db)):
+async def check_if_user(user_params: Annotated[dict, Depends(dependencies.user_parameters)], db: Session = Depends(dependencies.get_db)):
     try:
-        if not User.username or not User.password:
+        if not user_params['base_user_body'].username or not user_params['base_user_body'].password:
             raise HTTPException(status_code=404, detail="Invalid input (GET /check_user/<user_name>/<hashed_password>)")
 
         # Check if username matches with the user table
-        username = db.query(models.User).filter(models.User.username == User.username).first()
+        username = db.query(models.Users).filter(models.Users.username == user_params['base_user_body'].username).first()
         if not username:
-            return {"result": False, "Message": f"Username {User.username} doesn't exists!"}
+            return {"result": False, "Message": f"Username {user_params['base_user_body'].username} doesn't exists!"}
 
         # In case username exists into the table, check the password
-
         Decrypted_Password = Encrypter.decrypt_password(bytes(username.hashed_password))
-        if Decrypted_Password == User.password:
-            return {"result":True, "Message":f"Logged successfully as {User.username}"}
+
+        if Decrypted_Password == user_params['base_user_body'].password:
+            return {"result":True, "Message":f"Logged successfully as {user_params['base_user_body'].username}"}
         return {"result":False, "Message":"Incorrect password!"}      
         
     except Exception as e:
@@ -200,7 +188,7 @@ async def check_if_user(User: schemas.SingleUser, db: Session = Depends(get_db))
 
 
 @app.get("/get_password/{username}", description="Get hashed password by its username from user table")
-async def get_user_password(username: str, db: Session = Depends(get_db)):
+async def get_user_password(username: str, db: Session = Depends(dependencies.get_db)):
     try:
         if not username:
             raise HTTPException(status_code=404, detail="Invalid input (GET /get_password/<username>)")
@@ -217,19 +205,41 @@ async def get_user_password(username: str, db: Session = Depends(get_db)):
 # --------------------Second part of my API----------------------------------------
 
 @app.get("/get_books_by_owner_id/{owner_id}", description="Get all books by its owner_id")
-async def post_book(owner_id: str, db: Session = Depends(get_db)):
+async def post_book(books_params: Annotated[dict, Depends(dependencies.books_parameters)], db: Session = Depends(dependencies.get_db)):
     try:
+        if not books_params['owner_id']:
+            raise HTTPException(status_code=404, detail="Invalid input (GET /get_books_by_owner_id/<owner_id>)",headers=[])
 
-        books = crud.get_books_by_author(db=db, owner_id=owner_id)
-        return {"result": [result[0] for result in books]}
+        books = crud.get_books_by_author(db=db, owner_id=books_params['owner_id'])
+        return {"result": [crud.get_books_by_id(db=db, book_id=result[0]) for result in books]}
+
     except Exception as e:
-        return {"error": e}
+        {"error": f"an error ocurred {e}"}
+
+@app.post("/create_book/{owner_id}", description="create a new book")
+async def create_book(books_params: Annotated[dict, Depends(dependencies.books_parameters)], db: Session = Depends(dependencies.get_db)):
+    """revise this fucntion because i've done this on my class"""
+    try:
+        if not books_params['owner_id']:
+            raise HTTPException(status_code=404, detail="*change this*", headers=["",""])
+    
+        return {"result":  crud.create_book(db=db, book=books_params['book_body'], owner_id=books_params['owner_id'])}
+    
+    except Exception as e:
+        return {"error": f"An error ocurred: {e}"}
+
+@app.post("/files/")
+async def create_file(file: bytes = File()):
+    return {"file_size": len(file)}
 
 
-
-
-
-
+@app.get("/getimage/{image_name}")
+async def get_image(image_name: str):
+    image_path = f"images/{image_name}"
+    if os.path.exists(image_path):
+        return FileResponse(image_path, media_type="image/png")
+    print("Image not found!")  # Debugging line
+    return {"error": f"Image {image_name} not found"}
 
 
 

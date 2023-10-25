@@ -11,10 +11,11 @@ class SingleUser(BaseModel):
     password: str | None
 
 class BookBase(BaseModel):
-    owner_id: str | None = None
-    book_name: str
+    # owner_id: str | None = None
+    book_title: str
     description: str
     photo_path: str = '/photos/default.png'
+    price: float
     content: str
 
 class CreateBook(BookBase):
