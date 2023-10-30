@@ -1,9 +1,14 @@
 import numpy as np
 from sklearn.model_selection import train_test_split
+import matplotlib.pyplot as plt
 
-array = np.arange(0,3*10).reshape(10,3)
-print(array,"\n***")
+# ReLU
+Y = np.maximum(np.linspace(-1,1,10),0)
+X = np.arange(-5,5)
+print(Y)
+print(X)
 
-train, test = train_test_split(array)
-print("Train (80%):\n",train)
-print("Test (20%):\n",test)
+fig, ax = plt.subplots()
+
+ax.plot(X,Y)
+plt.show()

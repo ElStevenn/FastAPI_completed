@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 
-from fastapi import FastAPI, HTTPException, WebSocket, Depends, File, UploadFile
+from fastapi import FastAPI, HTTPException, Depends, File, UploadFile, WebSocket
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.encoders import jsonable_encoder
-from fastapi.responses import PlainTextResponse, FileResponse, RedirectResponse
+from fastapi.responses import PlainTextResponse, FileResponse, RedirectResponse, JSONResponse, HTMLResponse
 from sqlalchemy.orm import Session
-from api import crud, models, encrypt, dependencies, schemas 
+from api import crud, models, encrypt, dependencies, schemas, json_encoder, session
 from typing import Annotated
 from api.database import engine, inspector
-import sys, os
+import sys, os, json
 import uvicorn
 
 
@@ -84,15 +84,15 @@ async def get_an_item(item_params: Annotated[dict, Depends(dependencies.item_par
 
 
 @app.post("/post_user", description="Add a new user into to User table")
-async def post_user(user_params: Annotated[dict, Depends(dependencies.user_parameters)], db: Session = Depends(dependencies.get_db)):
+async def post_user(user_body: schemas.UserCreate, db: Session = Depends(dependencies.get_db)):
     # In this function there are an error when we create another consecutive user, solve it.
     try:
-        db_user = crud.get_user_by_email(db, email=user_params['user_body'].email)
+        db_user = crud.get_user_by_email(db, email=user_body.email)
         if db_user:
             raise HTTPException(status_code=400, detail="Email already registered")
         
         # Create new user
-        return {"response": crud.create_user(db=db, user=user_params['user_body'])}
+        return {"response": crud.create_user(db=db, user=user_body)}
         
         
     except Exception.IntegrityError:
@@ -204,17 +204,27 @@ async def get_user_password(username: str, db: Session = Depends(dependencies.ge
 
 # --------------------Second part of my API----------------------------------------
 
-@app.get("/get_books_by_owner_id/{owner_id}", description="Get all books by its owner_id")
-async def post_book(books_params: Annotated[dict, Depends(dependencies.books_parameters)], db: Session = Depends(dependencies.get_db)):
+@app.get("/get_books_by_owner_id/{owner_id}", description="Get all books by its owner_id, this also uses a json encoder")
+async def get_books_by_owner_id(books_params: Annotated[dict, Depends(dependencies.books_parameters)], db: Session = Depends(dependencies.get_db)):
     try:
         if not books_params['owner_id']:
-            raise HTTPException(status_code=404, detail="Invalid input (GET /get_books_by_owner_id/<owner_id>)",headers=[])
+            raise HTTPException(status_code=404, detail="Invalid input (GET /get_books_by_owner_id/<owner_id>)")
 
         books = crud.get_books_by_author(db=db, owner_id=books_params['owner_id'])
-        return {"result": [crud.get_books_by_id(db=db, book_id=result[0]) for result in books]}
-
+        
+        books_list = []
+        for result in books:
+            book_data = crud.get_books_by_id(db=db, book_id=result[0])
+            books_list.append(jsonable_encoder(book_data))
+        
+        response_data = {"result": books_list}
+        json_str = json.dumps(response_data, cls=json_encoder.LargeFloatEncoder)
+        return JSONResponse(content=json_str)
     except Exception as e:
-        {"error": f"an error ocurred {e}"}
+        response_data = {"an error ocurred": e}
+        json_str = json.dumps(response_data, cls=json_encoder.LargeFloatEncoder)
+        return JSONResponse(content=json_str)
+    
 
 @app.post("/create_book/{owner_id}", description="create a new book")
 async def create_book(books_params: Annotated[dict, Depends(dependencies.books_parameters)], db: Session = Depends(dependencies.get_db)):
@@ -242,11 +252,59 @@ async def get_image(image_name: str):
     return {"error": f"Image {image_name} not found"}
 
 
+# ------------------------------------------------ Web Socket Part --------------------------------------------
+
+html = """
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Chat</title>
+    </head>
+    <body>
+        <h1>WebSocket Chat</h1>
+        <form action="" onsubmit="sendMessage(event)">
+            <input type="text" id="messageText" autocomplete="off"/>
+            <button>Send</button>
+        </form>
+        <ul id='messages'>
+        </ul>
+        <script>
+            var ws = new WebSocket("ws://localhost:8000/ws");
+            ws.onmessage = function(event) {
+                var messages = document.getElementById('messages')
+                var message = document.createElement('li')
+                var content = document.createTextNode(event.data)
+                message.appendChild(content)
+                messages.appendChild(message)
+            };
+            function sendMessage(event) {
+                var input = document.getElementById("messageText")
+                ws.send(input.value)
+                input.value = ''
+                event.preventDefault()
+            }
+        </script>
+    </body>
+</html>
+"""
 
 
+@app.get("/web_socket_test")
+async def get():
+    return HTMLResponse(html)
 
 
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    await websocket.accept()
+    while True:
+        data = await websocket.receive_text()
 
+
+        await websocket.send_text(f"Message text was: {data} - {len(data)}")
+
+
+        
 if __name__ == "__main__":
     uvicorn.run(
         "app.main:app",
