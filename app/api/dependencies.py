@@ -1,6 +1,7 @@
 
-from . import database
-from . import schemas
+from . import database, schemas, session_manager
+from fastapi.exceptions import HTTPException
+
 
 def get_db():
     """dependence to acces into de db"""
@@ -19,3 +20,19 @@ async def item_paramters(item_id: str | None = None, item_body: schemas.ItemCrea
 
 async def books_parameters(book_id: str | None = None, owner_id: str | None = None, book_body: schemas.CreateBook | None = None):
     return {"book_id": book_id, "owner_id": owner_id, "book_body": book_body}
+
+verifier = session_manager.BasicVerifier(
+    identifier="general_verifier",
+    auto_error=True,
+    backend=session_manager.backend,
+    auth_http_exception=HTTPException(status_code=403, detail="invalid session"),
+)
+
+# Uses UUID
+cookie = session_manager.SessionCookie(
+    cookie_name="cookie",
+    identifier="general_verifier",
+    auto_error=True,
+    secret_key="DONOTUSE",
+    cookie_params=session_manager.cookie_params,
+)

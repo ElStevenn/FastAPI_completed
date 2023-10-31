@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 
-from fastapi import FastAPI, HTTPException, Depends, File, UploadFile, WebSocket
+from fastapi import FastAPI, HTTPException, Depends, File, UploadFile, WebSocket, Response
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import PlainTextResponse, FileResponse, RedirectResponse, JSONResponse, HTMLResponse
 from sqlalchemy.orm import Session
-from api import crud, models, encrypt, dependencies, schemas, json_encoder, session
+from api import crud, models, encrypt, dependencies, schemas, json_encoder, session_manager
 from typing import Annotated
 from api.database import engine, inspector
 import sys, os, json
 import uvicorn
-
+from uuid import UUID, uuid4
 
 app = FastAPI(
     debug=True,
@@ -303,7 +303,30 @@ async def websocket_endpoint(websocket: WebSocket):
 
         await websocket.send_text(f"Message text was: {data} - {len(data)}")
 
+# ----- Sessions ----
+@app.post("/create_session/{name}")
+async def create_session(name: str, response: Response):
 
+    session = uuid4()
+    data = session_manager.SessionData(username=name)
+
+    await session_manager.backend.create(session, data)
+    dependencies.cookie.attach_to_response(response, session)
+
+    return f"created session for {name}"
+
+
+@app.get("/whoami", dependencies=[Depends(dependencies.cookie)])
+async def whoami(session_data: session_manager.SessionData = Depends(dependencies.verifier)):
+    return session_data
+
+
+@app.post("/delete_session")
+async def del_session(response: Response, session_id: UUID = Depends(dependencies.cookie)):
+    await session_manager.backend.delete(session_id)
+    dependencies.cookie.delete_from_response(response)
+    return "deleted session"
+        
         
 if __name__ == "__main__":
     uvicorn.run(

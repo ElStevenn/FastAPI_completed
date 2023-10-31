@@ -7,8 +7,8 @@ class ItemBase(BaseModel):
     owner_id: str 
 
 class SingleUser(BaseModel):
-    username: str | None
-    password: str | None
+    username: str 
+    password: str 
 
 class BookBase(BaseModel):
     # owner_id: str | None = None
