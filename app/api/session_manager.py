@@ -8,9 +8,8 @@ from fastapi_sessions.frontends.implementations import SessionCookie, CookiePara
 
 from . import schemas
 
-class SessionData(schemas.SingleUser):
-    """Takes single user"""
-    pass
+class SessionData(BaseModel):
+    username: str
 
 
 cookie_params = CookieParameters()

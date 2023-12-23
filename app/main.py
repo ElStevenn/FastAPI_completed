@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 from fastapi import FastAPI, HTTPException, Depends, File, UploadFile, WebSocket, Response
-from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import PlainTextResponse, FileResponse, RedirectResponse, JSONResponse, HTMLResponse
@@ -18,8 +17,8 @@ app = FastAPI(
     title="Login and Register API",
     summary = "This is a login/register application created by Pau Mateu ",
     docs_url= "/documentation",
-    description="This will be the long description...",
-    version="0.12.2"
+    description="This will nothing :D",
+    version="0.12.3"
 )
 
 Key = encrypt.EncryptPassword.read_key()
@@ -39,8 +38,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
 
 
 @app.get("/", description = "This is the main function that will be redirected to show_tables_name")
@@ -94,7 +91,7 @@ async def post_user(user_body: schemas.UserCreate, db: Session = Depends(depende
         # Create new user
         return {"response": crud.create_user(db=db, user=user_body)}
         
-        
+
     except Exception.IntegrityError:
         raise HTTPException(status_code=400, detail="Duplicate item ID or other integrity error")   
 
@@ -330,8 +327,8 @@ async def del_session(response: Response, session_id: UUID = Depends(dependencie
         
 if __name__ == "__main__":
     uvicorn.run(
-        "app.main:app",
-        host="0.0.0.0",
-        port = 8432,
+        "app:main",
+        host="127.0.0.1",
+        port = 800,
         reload=True
     )
