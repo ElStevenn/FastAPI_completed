@@ -6,7 +6,7 @@
  - Then *.\venv\Scripts\Activate*
  - Install the requeriments -> *pip install -r requeriments.txt*
  - cd app
- - and finally execute this command -> uvicorn main:app --reload
+ - and finally execute this command -> uvicorn main:app --reload.
 
 # Info:
  - This repository has been created by Pau Mateu, his github is [aStevee](https://github.com/aStevee)
